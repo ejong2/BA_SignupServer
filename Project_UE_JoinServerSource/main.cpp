@@ -84,9 +84,10 @@ unsigned WINAPI WorkThread(void* Args)
 
     while (true)
     {
-
         char IdBuffer[PACKET_SIZE] = { 0, };
         char PwdBuffer[PACKET_SIZE] = { 0, };
+        char LoginBuffer[PACKET_SIZE] = "false";
+        char ExitBuffer[PACKET_SIZE] = "ID_EXIT";
 
         int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
         if (RecvBytes <= 0)
@@ -116,12 +117,33 @@ unsigned WINAPI WorkThread(void* Args)
         PwdBuffer[PACKET_SIZE - 1] = '\0';
         string strPWD = PwdBuffer;
 
-        pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`) VALUES(?, ?)");
-        pstmt->setString(1, strID);
-        pstmt->setString(2, strPWD);
-        pstmt->execute();
-        cout << "가입이 완료되었습니다." << endl;
+        string strLogin = LoginBuffer;
 
+        pstmt = con->prepareStatement("SELECT 1 FROM UserTable WHERE `ID` = ?");
+        pstmt->setString(1, strID);
+        rs = pstmt->executeQuery();
+        bool IdExists = rs->rowsCount() > 0 ? true : false;
+        if (IdExists)
+        {
+            cout << "이미 가입되어 있습니다." << endl;
+
+            int SendBytes = 0;
+            int TotalSentBytes = 0;
+            do
+            {
+                SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+                TotalSentBytes += SendBytes;
+            } while (TotalSentBytes < sizeof(ExitBuffer));
+        }
+        else
+        {
+            pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`, `isLogin`) VALUES(?, ?, ?)");
+            pstmt->setString(1, strID);
+            pstmt->setString(2, strPWD);
+            pstmt->setBoolean(3, false);
+            pstmt->execute();
+            cout << "가입이 완료되었습니다." << endl;
+        }
         EnterCriticalSection(&ServerCS);
         for (int i = 0; i < vSocketList.size(); i++)
         {
@@ -129,7 +151,7 @@ unsigned WINAPI WorkThread(void* Args)
             int TotalSentBytes = 0;
             do
             {
-                SendBytes = send(vSocketList[i], &PwdBuffer[TotalSentBytes], sizeof(PwdBuffer) - TotalSentBytes, 0);
+                SendBytes = send(CS, &PwdBuffer[TotalSentBytes], sizeof(PwdBuffer) - TotalSentBytes, 0);
                 TotalSentBytes += SendBytes;
             } while (TotalSentBytes < sizeof(PwdBuffer));
 
@@ -151,7 +173,7 @@ int main()
 {
     driver = get_driver_instance();
     con = driver->connect(server, username, password);
-    con->setSchema("LoginSheet");
+    con->setSchema("UE4SERVER");
 
     cout << "[회원가입 서버 활성화]" << '\n';
 
