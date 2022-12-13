@@ -17,7 +17,7 @@
 #pragma comment (lib, "mysqlcppconn.lib")
 
 #define PORT 19935
-#define IP_ADDRESS "127.0.0.1"
+#define IP_ADDRESS "172.16.2.84"
 #define PACKET_SIZE 50
 
 using namespace std;
@@ -86,8 +86,9 @@ unsigned WINAPI WorkThread(void* Args)
     {
         char IdBuffer[PACKET_SIZE] = { 0, };
         char PwdBuffer[PACKET_SIZE] = { 0, };
+        char PlayerNameBuffer[PACKET_SIZE] = { 0, };
         char LoginBuffer[PACKET_SIZE] = "false";
-        char ExitBuffer[PACKET_SIZE] = "ID_EXIT";
+        char ExitBuffer[PACKET_SIZE] = "EXIT";
 
         int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
         if (RecvBytes <= 0)
@@ -100,8 +101,11 @@ unsigned WINAPI WorkThread(void* Args)
             LeaveCriticalSection(&ServerCS);
             break;
         }
+
         IdBuffer[PACKET_SIZE - 1] = '\0';
         string strID = IdBuffer;
+
+        cout << "ID BUFFER : " << strID << '\n';
 
         RecvBytes = recv(CS, PwdBuffer, sizeof(PwdBuffer), 0);
         if (RecvBytes <= 0)
@@ -114,15 +118,37 @@ unsigned WINAPI WorkThread(void* Args)
             LeaveCriticalSection(&ServerCS);
             break;
         }
+
         PwdBuffer[PACKET_SIZE - 1] = '\0';
         string strPWD = PwdBuffer;
 
+        cout << "PWD BUFFER : " << strPWD << '\n';
+
+
+        RecvBytes = recv(CS, PlayerNameBuffer, sizeof(PlayerNameBuffer), 0);
+        if (RecvBytes <= 0)
+        {
+            cout << "클라이언트 연결 종료 : " << CS << '\n';
+
+            closesocket(CS);
+            EnterCriticalSection(&ServerCS);
+            vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
+            LeaveCriticalSection(&ServerCS);
+            break;
+        }
+
+        PlayerNameBuffer[PACKET_SIZE - 1] = '\0';
+        string strPlayerName = PlayerNameBuffer;
+
+        cout << "PlayerName BUFFER : " << strPlayerName << '\n';
+
         string strLogin = LoginBuffer;
 
-        pstmt = con->prepareStatement("SELECT 1 FROM UserTable WHERE `ID` = ?");
+        pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `ID` = ?");
         pstmt->setString(1, strID);
         rs = pstmt->executeQuery();
         bool IdExists = rs->rowsCount() > 0 ? true : false;
+
         if (IdExists)
         {
             cout << "이미 가입되어 있습니다." << endl;
@@ -137,13 +163,16 @@ unsigned WINAPI WorkThread(void* Args)
         }
         else
         {
-            pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`, `isLogin`) VALUES(?, ?, ?)");
+            pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`, `isLogin`, `PlayerName`) VALUES(?, ?, ?, ?)");
             pstmt->setString(1, strID);
             pstmt->setString(2, strPWD);
             pstmt->setBoolean(3, false);
+            pstmt->setString(4, strPlayerName);
+
             pstmt->execute();
             cout << "가입이 완료되었습니다." << endl;
         }
+
         EnterCriticalSection(&ServerCS);
         for (int i = 0; i < vSocketList.size(); i++)
         {
