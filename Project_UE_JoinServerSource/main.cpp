@@ -17,8 +17,8 @@
 #pragma comment (lib, "mysqlcppconn.lib")
 
 #define PORT 19935
-#define IP_ADDRESS "172.16.2.84"
-#define PACKET_SIZE 50
+#define IP_ADDRESS "127.0.0.1"
+#define PACKET_SIZE 200
 
 using namespace std;
 
@@ -36,48 +36,6 @@ sql::Statement* stmt = nullptr;
 sql::PreparedStatement* pstmt = nullptr;
 sql::ResultSet* rs = nullptr;
 
-std::string MultiByteToUtf8(std::string multibyte_str)
-{
-    char* pszIn = new char[multibyte_str.length() + 1];
-    strncpy_s(pszIn, multibyte_str.length() + 1, multibyte_str.c_str(), multibyte_str.length());
-
-    std::string resultString;
-
-    int nLenOfUni = 0, nLenOfUTF = 0;
-    wchar_t* uni_wchar = NULL;
-    char* pszOut = NULL;
-
-    // 1. ANSI(multibyte) Length
-    if ((nLenOfUni = MultiByteToWideChar(CP_ACP, 0, pszIn, (int)strlen(pszIn), NULL, 0)) <= 0)
-        return 0;
-
-    uni_wchar = new wchar_t[nLenOfUni + 1];
-    memset(uni_wchar, 0x00, sizeof(wchar_t) * (nLenOfUni + 1));
-
-    // 2. ANSI(multibyte) ---> unicode
-    nLenOfUni = MultiByteToWideChar(CP_ACP, 0, pszIn, (int)strlen(pszIn), uni_wchar, nLenOfUni);
-
-    // 3. utf8 Length
-    if ((nLenOfUTF = WideCharToMultiByte(CP_UTF8, 0, uni_wchar, nLenOfUni, NULL, 0, NULL, NULL)) <= 0)
-    {
-        delete[] uni_wchar;
-        return 0;
-    }
-
-    pszOut = new char[nLenOfUTF + 1];
-    memset(pszOut, 0, sizeof(char) * (nLenOfUTF + 1));
-
-    // 4. unicode ---> utf8
-    nLenOfUTF = WideCharToMultiByte(CP_UTF8, 0, uni_wchar, nLenOfUni, pszOut, nLenOfUTF, NULL, NULL);
-    pszOut[nLenOfUTF] = 0;
-    resultString = pszOut;
-
-    delete[] uni_wchar;
-    delete[] pszOut;
-
-    return resultString;
-}
-
 unsigned WINAPI WorkThread(void* Args)
 {
     SOCKET CS = *(SOCKET*)Args;
@@ -87,7 +45,6 @@ unsigned WINAPI WorkThread(void* Args)
         char IdBuffer[PACKET_SIZE] = { 0, };
         char PwdBuffer[PACKET_SIZE] = { 0, };
         char PlayerNameBuffer[PACKET_SIZE] = { 0, };
-        char LoginBuffer[PACKET_SIZE] = "false";
         char ExitBuffer[PACKET_SIZE] = "EXIT";
 
         int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
@@ -101,11 +58,8 @@ unsigned WINAPI WorkThread(void* Args)
             LeaveCriticalSection(&ServerCS);
             break;
         }
-
         IdBuffer[PACKET_SIZE - 1] = '\0';
         string strID = IdBuffer;
-
-        cout << "ID BUFFER : " << strID << '\n';
 
         RecvBytes = recv(CS, PwdBuffer, sizeof(PwdBuffer), 0);
         if (RecvBytes <= 0)
@@ -118,12 +72,8 @@ unsigned WINAPI WorkThread(void* Args)
             LeaveCriticalSection(&ServerCS);
             break;
         }
-
         PwdBuffer[PACKET_SIZE - 1] = '\0';
         string strPWD = PwdBuffer;
-
-        cout << "PWD BUFFER : " << strPWD << '\n';
-
 
         RecvBytes = recv(CS, PlayerNameBuffer, sizeof(PlayerNameBuffer), 0);
         if (RecvBytes <= 0)
@@ -140,9 +90,23 @@ unsigned WINAPI WorkThread(void* Args)
         PlayerNameBuffer[PACKET_SIZE - 1] = '\0';
         string strPlayerName = PlayerNameBuffer;
 
-        cout << "PlayerName BUFFER : " << strPlayerName << '\n';
+        //      pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `PlayerName` = ?");
+        //      pstmt->setString(4, strPlayerName);
+        //      rs = pstmt->executeQuery();
+        //      bool PlayerNameExists = rs->rowsCount() > 0 ? true : false;
 
-        string strLogin = LoginBuffer;
+        //      if (PlayerNameExists)
+        //      {
+        //          cout << "이미 가입된 플레이어 이름입니다" << '\n';
+
+        //          int SendBytes = 0;
+        //          int TotalSentBytes = 0;
+        //          do
+        //          {
+        //              SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+        //              TotalSentBytes += SendBytes;
+        //          } while (TotalSentBytes < sizeof(ExitBuffer));
+              //}
 
         pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `ID` = ?");
         pstmt->setString(1, strID);
@@ -151,7 +115,7 @@ unsigned WINAPI WorkThread(void* Args)
 
         if (IdExists)
         {
-            cout << "이미 가입되어 있습니다." << endl;
+            cout << "이미 가입된 ID 입니다." << '\n';
 
             int SendBytes = 0;
             int TotalSentBytes = 0;
