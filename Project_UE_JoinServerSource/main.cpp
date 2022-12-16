@@ -38,126 +38,137 @@ sql::ResultSet* rs = nullptr;
 
 unsigned WINAPI WorkThread(void* Args)
 {
-    SOCKET CS = *(SOCKET*)Args;
-
-    while (true)
+    try
     {
-        char IdBuffer[PACKET_SIZE] = { 0, };
-        char PwdBuffer[PACKET_SIZE] = { 0, };
-        char PlayerNameBuffer[PACKET_SIZE] = { 0, };
-        char ExitBuffer[PACKET_SIZE] = "EXIT";
+        SOCKET CS = *(SOCKET*)Args;
 
-        int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
-        if (RecvBytes <= 0)
+        while (true)
         {
-            cout << "클라이언트 연결 종료 : " << CS << '\n';
+            char IdBuffer[PACKET_SIZE] = { 0, };
+            char PwdBuffer[PACKET_SIZE] = { 0, };
+            char PlayerNameBuffer[PACKET_SIZE] = { 0, };
+            char ExitBuffer[PACKET_SIZE] = "EXIT";
 
-            closesocket(CS);
-            EnterCriticalSection(&ServerCS);
-            vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
-            LeaveCriticalSection(&ServerCS);
-            break;
-        }
-        IdBuffer[PACKET_SIZE - 1] = '\0';
-        string strID = IdBuffer;
-
-        RecvBytes = recv(CS, PwdBuffer, sizeof(PwdBuffer), 0);
-        if (RecvBytes <= 0)
-        {
-            cout << "클라이언트 연결 종료 : " << CS << '\n';
-
-            closesocket(CS);
-            EnterCriticalSection(&ServerCS);
-            vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
-            LeaveCriticalSection(&ServerCS);
-            break;
-        }
-        PwdBuffer[PACKET_SIZE - 1] = '\0';
-        string strPWD = PwdBuffer;
-
-        RecvBytes = recv(CS, PlayerNameBuffer, sizeof(PlayerNameBuffer), 0);
-        if (RecvBytes <= 0)
-        {
-            cout << "클라이언트 연결 종료 : " << CS << '\n';
-
-            closesocket(CS);
-            EnterCriticalSection(&ServerCS);
-            vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
-            LeaveCriticalSection(&ServerCS);
-            break;
-        }
-
-        PlayerNameBuffer[PACKET_SIZE - 1] = '\0';
-        string strPlayerName = PlayerNameBuffer;
-
-        //      pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `PlayerName` = ?");
-        //      pstmt->setString(4, strPlayerName);
-        //      rs = pstmt->executeQuery();
-        //      bool PlayerNameExists = rs->rowsCount() > 0 ? true : false;
-
-        //      if (PlayerNameExists)
-        //      {
-        //          cout << "이미 가입된 플레이어 이름입니다" << '\n';
-
-        //          int SendBytes = 0;
-        //          int TotalSentBytes = 0;
-        //          do
-        //          {
-        //              SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
-        //              TotalSentBytes += SendBytes;
-        //          } while (TotalSentBytes < sizeof(ExitBuffer));
-              //}
-
-        pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `ID` = ?");
-        pstmt->setString(1, strID);
-        rs = pstmt->executeQuery();
-        bool IdExists = rs->rowsCount() > 0 ? true : false;
-
-        if (IdExists)
-        {
-            cout << "이미 가입된 ID 입니다." << '\n';
-
-            int SendBytes = 0;
-            int TotalSentBytes = 0;
-            do
+            int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
+            if (RecvBytes <= 0)
             {
-                SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
-                TotalSentBytes += SendBytes;
-            } while (TotalSentBytes < sizeof(ExitBuffer));
-        }
-        else
-        {
-            pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`, `isLogin`, `PlayerName`) VALUES(?, ?, ?, ?)");
-            pstmt->setString(1, strID);
-            pstmt->setString(2, strPWD);
-            pstmt->setBoolean(3, false);
-            pstmt->setString(4, strPlayerName);
+                cout << "클라이언트 연결 종료 : " << CS << '\n';
 
-            pstmt->execute();
-            cout << "가입이 완료되었습니다." << endl;
-        }
-
-        EnterCriticalSection(&ServerCS);
-        for (int i = 0; i < vSocketList.size(); i++)
-        {
-            int SendBytes = 0;
-            int TotalSentBytes = 0;
-            do
-            {
-                SendBytes = send(CS, &PwdBuffer[TotalSentBytes], sizeof(PwdBuffer) - TotalSentBytes, 0);
-                TotalSentBytes += SendBytes;
-            } while (TotalSentBytes < sizeof(PwdBuffer));
-
-            if (SendBytes <= 0)
-            {
                 closesocket(CS);
                 EnterCriticalSection(&ServerCS);
                 vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
                 LeaveCriticalSection(&ServerCS);
                 break;
             }
+
+            IdBuffer[PACKET_SIZE - 1] = '\0';
+            string strID = IdBuffer;
+
+            RecvBytes = recv(CS, PwdBuffer, sizeof(PwdBuffer), 0);
+            if (RecvBytes <= 0)
+            {
+                cout << "클라이언트 연결 종료 : " << CS << '\n';
+
+                closesocket(CS);
+                EnterCriticalSection(&ServerCS);
+                vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
+                LeaveCriticalSection(&ServerCS);
+                break;
+            }
+
+            PwdBuffer[PACKET_SIZE - 1] = '\0';
+            string strPWD = PwdBuffer;
+
+            RecvBytes = recv(CS, PlayerNameBuffer, sizeof(PlayerNameBuffer), 0);
+            if (RecvBytes <= 0)
+            {
+                cout << "클라이언트 연결 종료 : " << CS << '\n';
+
+                closesocket(CS);
+                EnterCriticalSection(&ServerCS);
+                vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
+                LeaveCriticalSection(&ServerCS);
+                break;
+            }
+
+            PlayerNameBuffer[PACKET_SIZE - 1] = '\0';
+            string strPlayerName = PlayerNameBuffer;
+
+            pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `PlayerName` = ?");
+            pstmt->setString(1, strPlayerName);
+            rs = pstmt->executeQuery();
+            bool PlayerNameExists = rs->rowsCount() > 0 ? true : false;
+
+            if (PlayerNameExists)
+            {
+                cout << "이미 가입된 플레이어 이름입니다" << '\n';
+
+                int SendBytes = 0;
+                int TotalSentBytes = 0;
+                do
+                {
+                    SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+                    TotalSentBytes += SendBytes;
+                } while (TotalSentBytes < sizeof(ExitBuffer));
+            }
+            else
+            {
+                pstmt = con->prepareStatement("SELECT * FROM UserTable WHERE `ID` = ?");
+                pstmt->setString(1, strID);
+                rs = pstmt->executeQuery();
+                bool IdExists = rs->rowsCount() > 0 ? true : false;
+
+                if (IdExists)
+                {
+                    cout << "이미 가입된 ID 입니다." << '\n';
+
+                    int SendBytes = 0;
+                    int TotalSentBytes = 0;
+                    do
+                    {
+                        SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+                        TotalSentBytes += SendBytes;
+                    } while (TotalSentBytes < sizeof(ExitBuffer));
+                }
+                else
+                {
+                    pstmt = con->prepareStatement("INSERT INTO UserTable(`ID`,`PWD`, `isLogin`, `PlayerName`) VALUES(?, ?, ?, ?)");
+                    pstmt->setString(1, strID);
+                    pstmt->setString(2, strPWD);
+                    pstmt->setBoolean(3, false);
+                    pstmt->setString(4, strPlayerName);
+
+                    pstmt->execute();
+                    cout << "가입이 완료되었습니다." << endl;
+                }
+
+                EnterCriticalSection(&ServerCS);
+                for (int i = 0; i < vSocketList.size(); i++)
+                {
+                    int SendBytes = 0;
+                    int TotalSentBytes = 0;
+                    do
+                    {
+                        SendBytes = send(CS, &PwdBuffer[TotalSentBytes], sizeof(PwdBuffer) - TotalSentBytes, 0);
+                        TotalSentBytes += SendBytes;
+                    } while (TotalSentBytes < sizeof(PwdBuffer));
+
+                    if (SendBytes <= 0)
+                    {
+                        closesocket(CS);
+                        EnterCriticalSection(&ServerCS);
+                        vSocketList.erase(find(vSocketList.begin(), vSocketList.end(), CS));
+                        LeaveCriticalSection(&ServerCS);
+                        break;
+                    }
+                }
+            }
+            LeaveCriticalSection(&ServerCS);
         }
-        LeaveCriticalSection(&ServerCS);
+    }
+    catch (exception e)
+    {
+        cout << e.what() << endl;
     }
     return 0;
 }
