@@ -18,7 +18,7 @@
 
 #define PORT 19935
 #define IP_ADDRESS "172.16.2.84"
-#define PACKET_SIZE 200
+#define PACKET_SIZE 60
 
 using namespace std;
 
