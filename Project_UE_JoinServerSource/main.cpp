@@ -17,7 +17,7 @@
 #pragma comment (lib, "mysqlcppconn.lib")
 
 #define PORT 19935
-#define IP_ADDRESS "127.0.0.1"
+#define IP_ADDRESS "172.16.2.84"
 #define PACKET_SIZE 200
 
 using namespace std;
@@ -47,7 +47,8 @@ unsigned WINAPI WorkThread(void* Args)
             char IdBuffer[PACKET_SIZE] = { 0, };
             char PwdBuffer[PACKET_SIZE] = { 0, };
             char PlayerNameBuffer[PACKET_SIZE] = { 0, };
-            char ExitBuffer[PACKET_SIZE] = "EXIT";
+            char IdExitBuffer[PACKET_SIZE] = "ID_EXIT";
+            char NameExitBuffer[PACKET_SIZE] = "NAME_EXIT";
 
             int RecvBytes = recv(CS, IdBuffer, sizeof(IdBuffer), 0);
             if (RecvBytes <= 0)
@@ -107,9 +108,9 @@ unsigned WINAPI WorkThread(void* Args)
                 int TotalSentBytes = 0;
                 do
                 {
-                    SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+                    SendBytes = send(CS, &NameExitBuffer[TotalSentBytes], sizeof(NameExitBuffer) - TotalSentBytes, 0);
                     TotalSentBytes += SendBytes;
-                } while (TotalSentBytes < sizeof(ExitBuffer));
+                } while (TotalSentBytes < sizeof(NameExitBuffer));
             }
             else
             {
@@ -126,9 +127,9 @@ unsigned WINAPI WorkThread(void* Args)
                     int TotalSentBytes = 0;
                     do
                     {
-                        SendBytes = send(CS, &ExitBuffer[TotalSentBytes], sizeof(ExitBuffer) - TotalSentBytes, 0);
+                        SendBytes = send(CS, &IdExitBuffer[TotalSentBytes], sizeof(IdExitBuffer) - TotalSentBytes, 0);
                         TotalSentBytes += SendBytes;
-                    } while (TotalSentBytes < sizeof(ExitBuffer));
+                    } while (TotalSentBytes < sizeof(IdExitBuffer));
                 }
                 else
                 {
